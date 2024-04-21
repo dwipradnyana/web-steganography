@@ -1,0 +1,6 @@
+flask
+tailwind
+numpy
+scikit-image
+pillow
+sewar
