@@ -1,1 +1,0 @@
-This command will decode the data hidden in the input image and save the extracted data to the specified output file. If no output file is provided.

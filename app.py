@@ -1,8 +1,10 @@
 from flask import Flask, render_template, request, send_file
 import os
-from werkzeug.utils import secure_filename
+import sys
 from PIL import Image
-import numpy as np
+from werkzeug.utils import secure_filename
+# import numpy as np
+
 app = Flask(__name__)
 
 UPLOAD_FOLDER = 'upload'
@@ -14,49 +16,40 @@ app.config['DOWNLOAD_FOLDER'] = DOWNLOAD_FOLDER
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+app_directory = os.path.dirname(os.path.abspath(__file__))
+steganography_path = os.path.join(app_directory, 'app')
+sys.path.append(steganography_path)
+
+# import jsteg_f3
+
+@app.route("/")
+def index():
+    return render_template("home.html")
+
 import sys
 import os
-import argparse
 from PIL import Image
-from io import BytesIO
 import io
 
 from jpeg_encoder import *
 from jpeg_decoder import *
+from B import *
 
 import math
 import random
 import time
-from B import *
-
-from tqdm import tqdm
-
-def create(value=None, *args):
-    if len(args) and args[0]:
-        return [create(value,*args[1:]) for i in range(round(args[0]))]
-    else: return value
 
 class Encoder:
     def __init__(self, image, quality, out):
         self.out = out
-        self.jpeg_encoder = jpegEncoder(image, quality, out, 'DCT')
+        self.jpeg_encoder = jpegEncoder(image, quality, out, 'by: Jatin Mandav')
 
-    def write(self, data, password, use_simulated_annealing=True, annealing_iterations=1000, initial_temperature=100.0, cooling_rate=0.003):
+    def write(self, data):
         self.data = data
-        self.password = password
         self.jpeg_encoder.writeHeads()
 
-        start_time = time.time()
-
-
-        if use_simulated_annealing:
-            self.embedData_f3()
-        else:
-            self.embedData_simulated_annealing(annealing_iterations, initial_temperature, cooling_rate)
-
+        self.embedData_f3()
         self.jpeg_encoder.writeImage()
-        end_time = time.time()
-        print("Embedding process took {:.2f} seconds".format(end_time - start_time))
 
     def embedData_f3(self):
         coeff=self.jpeg_encoder.coeff
@@ -79,67 +72,17 @@ class Encoder:
                 bit_embed=byte_embed&1
                 byte_embed>>=1
                 need_embed-=1
-
-    def embedData_simulated_annealing(self, iterations, initial_temperature, cooling_rate):
-        coeff = self.jpeg_encoder.coeff
-        best_coeff = list(coeff)  
-        best_score = self.evaluateSolution(coeff)
-
-        temperature = initial_temperature
-        for _ in range(iterations):
-            # Generate a neighbor solution by modifying coefficients randomly
-            neighbor_coeff = self.generateNeighborSolution(coeff)
-            neighbor_score = self.evaluateSolution(neighbor_coeff)
-
-            # Calculate the difference in scores between neighbor and current solutions
-            delta_score = neighbor_score - best_score
-
-            # Decide whether to accept the neighbor solution or not
-            if delta_score < 0 or random.random() < math.exp(-delta_score / temperature):
-                coeff = list(neighbor_coeff)  
-                best_score = neighbor_score
-
-                # Update the best solution found so far
-                if best_score < self.evaluateSolution(best_coeff):
-                    best_coeff = list(coeff)
-
-            # Cool down the temperature
-            temperature *= 1 - cooling_rate
-
-        # Set the coefficients to the best solution found
-        self.jpeg_encoder.coeff = best_coeff
-
-    def evaluateSolution(self, coeff):
-        # For simplicity, let's return the sum of absolute values of coefficients as a proxy for solution quality
-        return sum(abs(c) for c in coeff)
-
-    def generateNeighborSolution(self, coeff):
-        # Generate a neighbor solution by modifying coefficients randomly
-        # For simplicity, we can perturb a random subset of coefficients
-        neighbor_coeff = list(coeff)
-        num_perturbations = random.randint(1, len(neighbor_coeff) // 10)  # Perturb a random subset of coefficients
-        indices = random.sample(range(len(neighbor_coeff)), num_perturbations)
-        for index in indices:
-            neighbor_coeff[index] = random.randint(-32768, 32767)  # Perturb the coefficient randomly
-        return neighbor_coeff
-    
 class Decoder:
     def __init__(self, data, out):
         self.out = out
         self.data = data
         self.jpeg_decoder = jpegDecoder(data)
 
-    def read(self, password):
-        self.password = password
+    def read(self):
         self.jpeg_decoder.readHeads()
         self.jpeg_decoder.readImage()
 
-        start_time = time.time() 
-
         self.extractData_f3()
-
-        end_time = time.time() 
-        print("Extraction process took {:.2f} seconds".format(end_time - start_time))
 
     def extractData_f3(self):
         coeff=self.jpeg_decoder.coeff
@@ -166,15 +109,11 @@ class Decoder:
                 byte_extract=0
                 finish+=1
 
-
-@app.route("/")
-def index():
-    return render_template("index.html")
-
 @app.route('/embed', methods=['POST', 'GET'])
 def encode():
     error_message = ''
     stego_image_path = None
+    quality_default = 50
 
     if request.method == 'POST':
         if 'file' not in request.files or 'message' not in request.files:
@@ -191,91 +130,105 @@ def encode():
             return render_template('embed.html', header='Error: Unsupported file format.')
 
         try:
+            print("Start encoding process")
+            
             # Save the uploaded files
-            filename = secure_filename(file.filename)
-            file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(file.filename))
             file.save(file_path)
-
-            message_filename = secure_filename(message.filename)
-            message_path = os.path.join(app.config['UPLOAD_FOLDER'], message_filename)
+            print(f"Image file saved to {file_path}")
+            
+            message_path = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(message.filename))
             message.save(message_path)
-
-            # Read message data from the uploaded message file
-            with open(message_path, 'rb') as f:
-                message_data = f.read()
+            print(f"Message file saved to {message_path}")
 
             # Open the image file
-            img = Image.open(file_path)
-            img_array = np.array(img)
+            image = Image.open(file_path)
+            print(f"Image opened: {image}")
+
+            # Read message data from the uploaded message file
+            with open(message_path, 'r') as file_:
+                data = file_.read()
+            print(f"Message data: {data}")
+
+            # Prepare output file path
+            stego_image_path = os.path.join(app.config['DOWNLOAD_FOLDER'], f"stego_{file.filename}")
+
+            # Open the output file in binary write mode
+            output = open(stego_image_path, 'wb')
+            print(f"Output file path: {stego_image_path}")
 
             # Create an instance of the Encoder class
-            encoder = Encoder(img_array, quality=100, out=None)
+            encoder = Encoder(image, quality_default, output)
+            print("Encoder initialized")
 
             # Call the write method to encode the message into the image
-            stego_image_path = os.path.join(app.config['DOWNLOAD_FOLDER'], f"stego_{filename}")
-            encoder.write(message_data, password=None)
+            encoder.write(data)
+            print("Message encoded")
 
-            # Save the encoded image to the download folder
-            img.save(stego_image_path)
-
-            header = f"Encoded Image: stego_{filename}"
+            # Re-open the stego image and save it to ensure it's properly closed
+            image = Image.open(stego_image_path)
+            image.save(stego_image_path)
+            stego_image_path = f"static/downloads/stego_{file.filename}"
             
         except Exception as e:
+            print(e)
             error_message = str(e)
-
+    
     return render_template('embed.html', image=stego_image_path, error=error_message)
 
-# @app.route('/extract', methods=['POST', 'GET'])
-# def decode():
-#     header = 'Decoded text:'
-#     global last_decoded_text
-#     decoded_text = ""
-    
-#     if request.method == 'POST':
-#         if 'file' not in request.files:
-#             return render_template('/extract.html', header=header)
-
-#         file = request.files['file']
-#         if file.filename == '':
-#             return render_template('/extract.html', header='Error: No file was selected')
-
-#         try:
-#             # Save the uploaded file to the static folder
-#             filename = secure_filename(file.filename)
-#             file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-#             file.save(file_path)
-
-#             # Call the extract function with the file object
-#             decoded_text = extract(file_path)
-
-#             # Store the decoded message
-#             last_decoded_text = decoded_text
-#         except ValueError as e:
-#             return render_template('/extract.html', header='Error: {}'.format(str(e)))
-
-#     return render_template('/extract.html', header=header, text=decoded_text)
-
-# @app.route('/image/last/extracted')
-# def get_last_decoded_message():
-# 	global last_decoded_text
-
-# 	if last_decoded_text is None:
-# 		return 'No extracted data available.'
-
-# 	return last_decoded_text
-
-# @app.route("/embed")
-# def encode():
-#     return render_template("embed.html")
-
-@app.route("/extract")
+@app.route("/extract", methods=['POST', 'GET'])
 def decode():
-    return render_template("/extract.html")
+    error_message = ''
+    decoded_message = ''
 
-@app.route('/download_embedded_image')
-def download_embedded_image():
-    embedded_image_path = os.path.join(app.config['UPLOAD_FOLDER'], 'embedded_image.png')
-    return send_file(embedded_image_path, as_attachment=True)
+    if request.method == 'POST':
+        if 'file' not in request.files:
+            error_message = 'No file uploaded.'
+            return render_template('embed.html', header=error_message)
+
+        file = request.files['file']
+
+        if file.filename == '':
+            return render_template('embed.html', header='Error: No selected file.')
+
+        if not allowed_file(file.filename):
+            return render_template('embed.html', header='Error: Unsupported file format.')
+
+        try:
+            print("Start decoding process")
+            
+            # Save the uploaded file
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(file.filename))
+            file.save(file_path)
+            print(f"Image file saved to {file_path}")
+
+            # Open the image file
+            with open(file_path, 'rb') as image:
+                print(f"Image opened: {image}")
+
+                # Create a StringIO to capture the output
+                output = io.StringIO()
+
+                # Create an instance of the Decoder class
+                decoder = Decoder(image.read(), output)
+                print("Decoder initialized")
+
+                # Call the read method to decode the message from the image
+                decoder.read()
+                print("Message decoded")
+
+                # Get the decoded message
+                decoded_message = output.getvalue()
+                print("Decoded Message: ", decoded_message)
+
+                output.close()
+            
+        except Exception as e:
+            print(e)
+            error_message = str(e)
+
+    return render_template("extract.html", error=error_message, decoded_message=decoded_message)
+
 
 if __name__ == "__main__":
     app.run(debug=True)

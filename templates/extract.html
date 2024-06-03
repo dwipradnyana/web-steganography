@@ -1,157 +1,106 @@
-<!DOCTYPE html>
-<html>
-  <head>
-    <title>Embedd Message</title>
-    <link rel="stylesheet" href="/static/css/main.css" />
-    <style>
-      #image-preview {
-        max-width: 30%;
-        max-height: 30%;
-        margin-top: 10px;
-      }
-    </style>
-    <script>
-      function previewImage(input) {
-        const preview = document.getElementById("image-preview");
-        const placeholder = document.getElementById("placeholder");
+{% extends 'index.html' %} {% block title %}Extract Message{% endblock %}
+{%block content %}
+<script>
+  function previewImage(input) {
+    const preview = document.getElementById("image-preview");
+    const placeholder = document.getElementById("placeholder");
 
-        const file = input.files[0];
+    const file = input.files[0];
 
-        if (file) {
-          preview.src = URL.createObjectURL(file);
-          preview.classList.remove("hidden");
-          placeholder.classList.add("hidden");
-        } else {
-          preview.src = "";
-          preview.classList.add("hidden");
-          placeholder.classList.remove("hidden");
-        }
-      }
-    </script>
-  </head>
-  <body>
-    <div class="bg-white">
-      <header class="relative bg-white">
-        <nav class="flex items-center justify-between p-6 lg:px-8">
-          <div class="flex lg:flex-1">
-            <a href="#" class="-m-1.5 p-1.5">
-              <span class="sr-only">Your Company</span>
-              <img
-                class="h-8 w-auto"
-                src="https://tailwindui.com/img/logos/mark.svg?color=indigo&shade=600"
-                alt=""
-              />
-            </a>
-          </div>
-          <div class="flex lg:hidden">
-            <button
-              id="mobile-menu-button"
-              type="button"
-              class="-m-2.5 inline-flex items-center justify-center rounded-md p-2.5 text-gray-700"
-            >
-              <span class="sr-only">Open main menu</span>
-              <svg
-                class="h-6 w-6"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke-width="1.5"
-                stroke="currentColor"
-                aria-hidden="true"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"
-                />
-              </svg>
-            </button>
-          </div>
-          <div class="hidden lg:flex lg:gap-x-12">
-            <a
-              href="{{url_for('index')}}"
-              class="text-sm font-semibold leading-6 text-gray-900"
-              >Home</a
-            >
-            <a
-              href="{{url_for('index')}}"
-              class="text-sm font-semibold leading-6 text-gray-900"
-              >About</a
-            >
-          </div>
-        </nav>
-      </header>
-    </div>
-    <div class="center-container mt-6">
-      <div
-        class="container mx-auto p-9 bg-white rounded-md shadow-md border border-slate-200"
+    if (file) {
+      preview.src = URL.createObjectURL(file);
+      preview.classList.remove("hidden");
+      placeholder.classList.add("hidden");
+    } else {
+      preview.src = "";
+      preview.classList.add("hidden");
+      placeholder.classList.remove("hidden");
+    }
+  }
+</script>
+<div class="center-container mt-32">
+  <div
+    class="container mx-auto p-9 bg-white rounded-md shadow-md border border-slate-200"
+  >
+    <div class="flex justify-center items-center mx-auto mb-4">
+      <a
+        href="./embed"
+        class="rounded-l-md bg-blue-900 w-48 h-12 px-3.5 py-2.5 text-md font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 text-center"
       >
-        <div class="flex justify-center items-center mx-auto mb-4">
-          <a
-            href="./embed"
-            class="rounded-l-md bg-blue-900 w-48 h-12 px-3.5 py-2.5 text-md font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 text-center"
-          >
-            Encode
-          </a>
-          <a
-            href="./extract"
-            class="rounded-r-md bg-blue-800 w-48 h-12 px-3.5 py-2.5 text-md font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 text-center"
-          >
-            Decode
-          </a>
-        </div>
-        <h1 class="text-2xl font-bold mb-4 text-center">Extract Message</h1>
-        <!-- <div class="flex flex-col mb-4"> -->
-        <div class="flex items-center justify-center h-auto w-auto">
-          <input
-            type="file"
-            id="image-input"
-            class="hidden"
-            onchange="previewImage(this)"
-          />
-          <img id="image-preview" class="hidden" />
-          <div
-            id="placeholder"
-            class="flex items-center justify-center h-64 w-64 rounded-lg border border-gray-300 bg-gray-50 placeholder-gray-400"
-          >
-            <h3 class="text-gray-500 text-center">Insert Image</h3>
-          </div>
-        </div>
-        <form
-          id="extract-form"
-          action="/extract"
-          method="POST"
-          enctype="multipart/form-data"
-        >
-          <label for="image-input" class="block text-gray-700 font-bold mb-2">
-            Stego Image:
-          </label>
-          <input
-            input
-            type="file"
-            name="file"
-            class="w-full p-1 border border-gray-200 rounded-md"
-            accept="image/*"
-            onchange="previewImage(this)"
-          />
-          <!-- </div> -->
-
-          <div class="flex flex-col mb-4">
-            <label
-              for="message-input"
-              class="block text-gray-700 font-bold mb-2"
-            >
-              Secret Message:
-            </label>
-          </div>
-
-          <button
-            class="justify-center rounded-md bg-blue-900 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-            onclick="extractMessage()"
-          >
-            Extract Message
-          </button>
-        </form>
+        Embed
+      </a>
+      <a
+        href="./extract"
+        class="rounded-r-md bg-blue-800 w-48 h-12 px-3.5 py-2.5 text-md font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 text-center"
+      >
+        Extract
+      </a>
+    </div>
+    <h1 class="text-2xl font-bold mb-4 text-center">Extract Message</h1>
+    <!-- <div class="flex flex-col mb-4"> -->
+    <div class="flex items-center justify-center h-auto w-auto">
+      <input
+        type="file"
+        id="image-input"
+        class="hidden"
+        onchange="previewImage(this)"
+      />
+      <img
+        id="image-preview"
+        class="hidden"
+        style="max-width: 30%; max-height: 30%; margin-top: 10px"
+      />
+      <div
+        id="placeholder"
+        class="flex items-center justify-center h-64 w-64 rounded-lg border border-gray-300 bg-gray-50 placeholder-gray-400"
+      >
+        <h3 class="text-gray-500 text-center">Insert Image</h3>
       </div>
     </div>
-  </body>
-</html>
+    <form
+      id="extract-form"
+      action="/extract"
+      method="POST"
+      enctype="multipart/form-data"
+    >
+      <label for="image-input" class="block text-gray-700 font-bold mb-2">
+        Stego Image:
+      </label>
+      <input
+        input
+        type="file"
+        name="file"
+        class="w-full p-1 border border-gray-200 rounded-md"
+        accept="image/*"
+        onchange="previewImage(this)"
+      />
+      <!-- </div> -->
+
+      <div class="flex flex-col mb-4">
+        <label for="message-input" class="block text-gray-700 font-bold mb-2">
+          Secret Message:
+        </label>
+        {% if decoded_message %}
+        <div class="flex flex-col mb-4">
+          <textarea
+            id="message-output"
+            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+            rows="10"
+            readonly
+          >
+{{ decoded_message }}</textarea
+          >
+        </div>
+        {% endif %}
+      </div>
+
+      <button
+        class="justify-center rounded-md bg-blue-900 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+        onclick="extractMessage()"
+      >
+        Extract Message
+      </button>
+    </form>
+  </div>
+</div>
+{% endblock %}

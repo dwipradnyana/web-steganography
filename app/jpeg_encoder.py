@@ -25,7 +25,7 @@ class jpegEncoder(object):
         self.initDct()
         self.initHuff()
         self.getCoeff()
-
+    # print('1')
     def getYcc(self):
         max_hsamp_factor=max(self.hsamp_factor)
         max_vsamp_factor=max(self.vsamp_factor)
@@ -54,6 +54,7 @@ class jpegEncoder(object):
         Cr=[[Cr[row<<1][col<<1] for col in range(self.comp_width[2])] for row in range(self.comp_height[2])]
         self.comp=[Y,Cb,Cr]
 
+    # print('2')
     def initDct(self):
         self.quantum=create(0,2,64)
         self.divisors=create(0,2,64)
@@ -72,6 +73,7 @@ class jpegEncoder(object):
             for j in range(len(self.quantum[i])):
                 self.divisors[i].append(8*AAN[j%8]*AAN[j//8]*self.quantum[i][j])
 
+    # print('3')
     def initHuff(self):
         self.dc=create(0,2,12,2)
         self.ac=create(0,2,255,2)
@@ -88,6 +90,7 @@ class jpegEncoder(object):
             cal(BITS[i<<1],VAL[i<<1],self.dc[i])
             cal(BITS[i<<1|1],VAL[i<<1|1],self.ac[i])
 
+    # print('4')
     def forwardDct(self,indata,q_num):
         output=[[indata[i][j]-128 for j in range(8)] for i in range(8)]
         tmp=create(0,14)
@@ -149,6 +152,7 @@ class jpegEncoder(object):
                 ans.append(round(output[i][j]/self.divisors[q_num][i*8+j]))
         self.coeff.extend(ans)
 
+    # print('5')
     def getCoeff(self):
         dct_array=create(0,8,8)
         self.coeff=[]
@@ -170,10 +174,12 @@ class jpegEncoder(object):
                                     dct_array[a][b]=indata[int(min(ia+a,maxa))][int(min(ib+b,maxb))]
                             self.forwardDct(dct_array,self.qtable_number[comp])
 
+    # print('6')
     def write_array(self,data):
         length=((data[2]&0xff)<<8)+(data[3]&0xff)+2
         self.out.write(bytearray(data[:length]))
 
+    # print('7')
     def writeHeads(self):
         SOI=[0xff,0xd8]
         self.out.write(bytearray(SOI))
@@ -222,6 +228,7 @@ class jpegEncoder(object):
         SOS.extend([0x00,0x3f,0x00])
         self.write_array(SOS)
 
+    # print('8')
     def buffer_it(self,code,size):
         put_buffer=code
         put_bits=self.buffer_put_bits+size
@@ -237,6 +244,7 @@ class jpegEncoder(object):
         self.buffer_put_buffer=put_buffer
         self.buffer_put_bits=put_bits
 
+    # print('9')
     def huffEncode(self,zigzag,prec,dc_code,ac_code):
         tmp=tmp2=zigzag[0]-prec
         if tmp<0:
@@ -270,27 +278,39 @@ class jpegEncoder(object):
                 r=0
         if r>0: self.buffer_it(*self.ac[ac_code][0])
 
+    # print('10')
     def writeImage(self):
         index=0
         self.buffer_put_buffer=0
         self.buffer_put_bits=0
         last_dc_value=create(0,self.comp_num)
+        # print(self.block_height)
+        # print(self.block_width)
+        # print(self.comp_num)
+        # print(len(self.vsamp_factor))
+        # print(len(self.hsamp_factor))
+        
         for r in range(min(self.block_height)):
             for c in range(min(self.block_width)):
                 for comp in range(self.comp_num):
                     for i in range(self.vsamp_factor[comp]):
                         for j in range(self.hsamp_factor[comp]):
+                            # print(r,c,i,j)
                             dct_array=self.coeff[index:index+64]
                             self.huffEncode(dct_array,last_dc_value[comp],self.dctable_number[comp],self.actable_number[comp])
                             last_dc_value[comp]=dct_array[0]
                             index+=64
+        # print("lopping selesai")
         put_buffer=self.buffer_put_buffer
         put_bits=self.buffer_put_bits
+        # print(put_bits)
         while put_bits>0:
             c=put_buffer>>16&0xff
             self.out.write(bytearray([c]))
+            # print(c)
             if c==0xff: self.out.write(bytearray([0]))
             put_buffer<<=8
             put_bits-=8
         EOI=[0xff,0xd9]
         self.out.write(bytearray(EOI))
+        # print("image printed")

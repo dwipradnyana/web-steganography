@@ -12,11 +12,9 @@ def calculate_psnr(original, modified):
     psnr = 20 * math.log10(max_pixel / math.sqrt(mse))
     return psnr
 
-# Load the original and modified images
-original_image = Image.open("download.jpeg")
-modified_image = Image.open("output.jpeg")
+original_image = Image.open("gray2.jpeg")
+modified_image = Image.open("stego_gray2.jpeg")
 
-# Calculate PSNR
 psnr_value = calculate_psnr(original_image, modified_image)
 
 print("PSNR:", psnr_value)

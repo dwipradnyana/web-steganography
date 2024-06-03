@@ -1,0 +1,41 @@
+@app.route('/embed', methods=['POST', 'GET'])
+def encode():
+    if request.method == "POST":
+        # Check if file and message are provided
+        print('1')
+        if 'file' not in request.files:
+            return render_template('embed.html', errors="No file provided!")
+        file = request.files['file']
+        msg = request.files('msg')
+        if not file or file.filename == '':
+            return render_template('embed.html', errors="No file selected!")
+        if not msg:
+            return render_template('embed.html', errors="Message is empty!")
+        print('2')
+        # Ensure the file has an allowed extension
+        allowed_ext = {'.jpg', '.jpeg', 'txt'}
+        if os.path.splitext(file.filename)[1].lower() not in allowed_ext:
+            return render_template('embed.html', errors="Unsupported file format!")
+
+        # Generate a unique directory name using uuid or any other method
+        unique_id = '12341234'
+        print('3')
+        # Save the uploaded image
+        folder = os.path.join('./download', unique_id)
+        os.makedirs(folder, exist_ok=True)
+        file_path = os.path.join(folder, file.filename)
+        file.save(file_path)
+        print('4')
+        # Encode message into the image
+        output_path = os.path.join(folder, 'encoded_image.jpg')
+        encoder = jsteg_f3.Encoder(file_path, quality=90, out=output_path)
+        encoder.write(msg, password="123456")
+        print('5')
+        # Check if encoding was successful
+        if os.path.isfile(output_path):
+            encoded_img = f"<center><a href='/static/download/{unique_id}/encoded_image.jpg' download><h3>Download Encoded Image</h3></a></center>"
+            return render_template('embed.html', encoded_img=encoded_img)
+        else:
+            return render_template('embed.html', errors="Something went wrong during encoding!")
+
+    return render_template('embed.html')
